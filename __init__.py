@@ -1,17 +1,18 @@
 import os
 from ovos_utils.ocp import MediaType, PlaybackType
 from ovos_utils.log import LOG
-from ovos_workshop.decorators import ocp_search
+from ovos_utils.parse import fuzzy_match
+from ovos_workshop.decorators import ocp_search, ocp_featured_media
 from ovos_workshop.skills.common_play import OVOSCommonPlaybackSkill
 from .playlist import create_playlist, fetch_article_urls
 
-class Omroepbrabant(OVOSCommonPlaybackSkill):
+class OmroepBrabant(OVOSCommonPlaybackSkill):
     def __init__(self, *args, **kwargs):
-        # Het pad naar het icoon van de skill
+        # Verwijs naar het logo als skill icoon
         skill_icon_path = os.path.join(
             os.path.dirname(__file__),
             "res",
-            "logo.svg"  # Verwijs naar je skill icoon
+            "logo.svg"
         )
         
         super().__init__(
@@ -22,46 +23,87 @@ class Omroepbrabant(OVOSCommonPlaybackSkill):
         )
         LOG.info("Omroep Brabant skill geladen!")
 
+    @ocp_featured_media()
+    def featured_media(self):
+        """Standaard 'featured' artikelen als fallback."""
+        articles_info = fetch_article_urls()
+        playlist_data = create_playlist(articles_info)
+
+        return [
+            {
+                "match_confidence": 80,
+                "media_type": MediaType.NEWS,
+                "uri": track["uri"],
+                "playback": PlaybackType.AUDIO,
+                "image": track["image"],
+                "bg_image": track["bg_image"],
+                "skill_icon": self.skill_icon,
+                "title": track["title"],
+                "artist": "Omroep Brabant",
+                "album": "Omroep Brabant Nieuws",
+                "length": -1
+            }
+            for track in playlist_data["playlist"]
+        ]
+
     @ocp_search()
     def search_omroep_brabant(self, phrase: str, media_type: MediaType):
-        """Zoekt naar de omroep Brabant playlist met nieuwsberichten."""
-        if media_type == MediaType.NEWS:  # Controleer specifiek op MediaType.NEWS
-            LOG.info(f"Zoeken naar: {phrase}")
-            score = 100  # Stel de match confidence in op 100 omdat het een specifieke bron is
-
-            # Haal de artikelen op
-            articles_info = fetch_article_urls()
-
-            # Maak de playlist op basis van de artikelen
-            playlist_data = create_playlist(articles_info)
-
-            # Converteer elk item in de playlist naar het vereiste formaat
-            playlist_results = [
-                {
-                    "uri": track["uri"],
-                    "title": track["title"],
-                    "media_type": MediaType.NEWS,
-                    "playback": PlaybackType.AUDIO,
-                    "match_confidence": score,
-                    "artist": "Omroep Brabant",
-                    "album": "Omroep Brabant News",
-                    "image": track["image"],  # Afbeelding van het artikel
-                    "bg_image": track["bg_image"],  # Achtergrondafbeelding
-                    "skill_icon": self.skill_icon,  # Icoon van de skill
-                    "length": -1  # Zet op -1 voor live streams of onbekende lengte
-                }
-                for track in playlist_data["playlist"]
-            ]
-
-            # Retourneer de volledige playlist als één resultaat
-            yield {
-                "match_confidence": score,
+        """Zoekt naar Omroep Brabant nieuwsberichten."""
+        base_score = 0
+    
+        # Score verhogen voor specifieke vermelding van Omroep Brabant of Brabant nieuws
+        if "brabant" in phrase.lower() or "omroep brabant" in phrase.lower():
+            base_score += 40
+        else:
+            base_score -= 50
+    
+        if "nieuws" in phrase.lower():
+            base_score += 10
+    
+        LOG.info(f"Zoeken naar: {phrase}")
+        score_threshold = 50
+    
+        # Haal artikelen op en maak de playlist
+        articles_info = fetch_article_urls()
+        playlist_data = create_playlist(articles_info)
+        LOG.info(f"Fetched {len(articles_info)} articles")
+        LOG.info(f"Created playlist with {len(playlist_data['playlist'])} items")
+    
+        playlist_results = []
+        for track in playlist_data["playlist"]:
+            title_match_score = fuzzy_match(track["title"].lower(), phrase.lower()) * 100
+            score = round(base_score + title_match_score)
+            LOG.info(f"Matching '{phrase}' with '{track['title']}' - Score: {score}")
+    
+            if score < score_threshold:
+                LOG.info(f"Skipping '{track['title']}' due to low score")
+                continue
+    
+            playlist_results.append({
+                "uri": track["uri"],
+                "title": track["title"],
                 "media_type": MediaType.NEWS,
-                "playlist": playlist_results,  # Gebruik een playlist in plaats van een uri
                 "playback": PlaybackType.AUDIO,
-                "image": self.skill_icon,  # Gebruik het skill-icoon als afbeelding
-                "bg_image": self.skill_icon,  # Achtergrondafbeelding is ook het skill-icoon
-                "skill_icon": self.skill_icon,  # Icoon van de skill
+                "match_confidence": 100,
+                "artist": "Omroep Brabant",
+                "album": "Omroep Brabant Nieuws",
+                "image": track["image"],
+                "bg_image": track["bg_image"],
+                "skill_icon": self.skill_icon,
+                "length": -1
+            })
+    
+        if playlist_results:
+            yield {
+                "match_confidence": 100,
+                "media_type": MediaType.NEWS,
+                "playlist": playlist_results,
+                "playback": PlaybackType.AUDIO,
+                "image": self.skill_icon,
+                "bg_image": self.skill_icon,
+                "skill_icon": self.skill_icon,
                 "title": "Omroep Brabant Nieuws",
-                "length": -1  # Zet de lengte op -1 als het een stream of variabele duur is
+                "length": -1
             }
+        else:
+            LOG.info("Geen resultaten gevonden voor Omroep Brabant.")
