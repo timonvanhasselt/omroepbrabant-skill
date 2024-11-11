@@ -8,7 +8,7 @@ from .playlist import create_playlist, fetch_article_urls
 
 class OmroepBrabant(OVOSCommonPlaybackSkill):
     def __init__(self, *args, **kwargs):
-        # Verwijs naar het logo als skill icoon
+        # Refer to the logo as the skill icon
         skill_icon_path = os.path.join(
             os.path.dirname(__file__),
             "res",
@@ -21,11 +21,11 @@ class OmroepBrabant(OVOSCommonPlaybackSkill):
             *args,
             **kwargs
         )
-        LOG.info("Omroep Brabant skill geladen!")
+        LOG.info("Omroep Brabant skill loaded!")
 
     @ocp_featured_media()
     def featured_media(self):
-        """Standaard 'featured' artikelen als fallback."""
+        """Default 'featured' articles as fallback."""
         articles_info = fetch_article_urls()
         playlist_data = create_playlist(articles_info)
 
@@ -40,7 +40,7 @@ class OmroepBrabant(OVOSCommonPlaybackSkill):
                 "skill_icon": self.skill_icon,
                 "title": track["title"],
                 "artist": "Omroep Brabant",
-                "album": "Omroep Brabant Nieuws",
+                "album": "Omroep Brabant News",
                 "length": -1
             }
             for track in playlist_data["playlist"]
@@ -48,22 +48,22 @@ class OmroepBrabant(OVOSCommonPlaybackSkill):
 
     @ocp_search()
     def search_omroep_brabant(self, phrase: str, media_type: MediaType):
-        """Zoekt naar Omroep Brabant nieuwsberichten."""
+        """Searches for Omroep Brabant news articles."""
         base_score = 0
     
-        # Score verhogen voor specifieke vermelding van Omroep Brabant of Brabant nieuws
+        # Increase score for specific mention of Omroep Brabant or Brabant news
         if "brabant" in phrase.lower() or "omroep brabant" in phrase.lower():
             base_score += 40
         else:
             base_score -= 50
     
-        if "nieuws" in phrase.lower():
+        if "news" in phrase.lower():
             base_score += 10
     
-        LOG.info(f"Zoeken naar: {phrase}")
+        LOG.info(f"Searching for: {phrase}")
         score_threshold = 50
     
-        # Haal artikelen op en maak de playlist
+        # Retrieve articles and create the playlist
         articles_info = fetch_article_urls()
         playlist_data = create_playlist(articles_info)
         LOG.info(f"Fetched {len(articles_info)} articles")
@@ -86,7 +86,7 @@ class OmroepBrabant(OVOSCommonPlaybackSkill):
                 "playback": PlaybackType.AUDIO,
                 "match_confidence": 100,
                 "artist": "Omroep Brabant",
-                "album": "Omroep Brabant Nieuws",
+                "album": "Omroep Brabant News",
                 "image": track["image"],
                 "bg_image": track["bg_image"],
                 "skill_icon": self.skill_icon,
@@ -102,8 +102,8 @@ class OmroepBrabant(OVOSCommonPlaybackSkill):
                 "image": self.skill_icon,
                 "bg_image": self.skill_icon,
                 "skill_icon": self.skill_icon,
-                "title": "Omroep Brabant Nieuws",
+                "title": "Omroep Brabant News",
                 "length": -1
             }
         else:
-            LOG.info("Geen resultaten gevonden voor Omroep Brabant.")
+            LOG.info("No results found for Omroep Brabant.")
