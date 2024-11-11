@@ -43,9 +43,9 @@ def fetch_tts_url(article_url):
 def create_playlist(articles_info):
     results = []
     
-    # Gebruik de `logo.svg` afbeelding als standaard
-    default_image = os.path.join(os.path.dirname(__file__), "res", "logo.png")  # Gebruik de PNG als albumafbeelding
-    default_icon = os.path.join(os.path.dirname(__file__), "res", "logo.svg")  # SVG blijft als skill-icoon
+    # Use the `logo.svg` image as the default
+    default_image = os.path.join(os.path.dirname(__file__), "res", "logo.png")  # Use the PNG as the album image
+    default_icon = os.path.join(os.path.dirname(__file__), "res", "logo.svg")  # SVG remains as the skill icon
 
     for external_id, title in articles_info:
         article_url = f"https://api.omroepbrabant.nl/api/article/{external_id}"
@@ -58,7 +58,7 @@ def create_playlist(articles_info):
                 "playback": PlaybackType.AUDIO,
                 "match_confidence": 100,
                 "artist": "Omroep Brabant",
-                "album": "Omroep Brabant Nieuws",
+                "album": "Omroep Brabant News",
                 "image": default_image,
                 "bg_image": default_image,
                 "skill_icon": default_icon
@@ -71,6 +71,6 @@ def create_playlist(articles_info):
         "media_type": MediaType.NEWS,
         "playlist": results,
         "playback": PlaybackType.AUDIO,
-        "title": "Omroep Brabant Nieuws",
+        "title": "Omroep Brabant News",
         "length": -1
     }
